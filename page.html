@@ -6,21 +6,21 @@
   <title>iVend Smart Console</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
   <style>
     :root {
       /* Palette - Light/White Theme */
       --bg-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
       --card-bg: #ffffff;
-      --card-border: transparent; /* Cleaner look without borders */
-      --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.1); /* Deep soft shadow */
+      --card-border: transparent;
+      --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
       
       --primary: #f97316; /* iVend Orange */
       --primary-hover: #ea580c;
       --primary-glow: rgba(249, 115, 22, 0.3);
       
-      --text-main: #0f172a; /* Dark Slate for contrast */
-      --text-sub: #64748b;  /* Muted Slate */
+      --text-main: #0f172a;
+      --text-sub: #64748b;
       
       --success: #10b981;
       --error: #ef4444;
@@ -118,8 +118,9 @@
 
     header {
       width: 100%;
-      padding: 24px 32px;
+      padding: 16px 32px;
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
       background: rgba(255, 255, 255, 0.85);
@@ -127,7 +128,45 @@
       -webkit-backdrop-filter: blur(20px);
       z-index: 20;
       border-bottom: 1px solid rgba(0,0,0,0.05);
+      gap: 15px;
     }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* New Info Bar Styling */
+    .info-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .info-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #f8fafc;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-sub);
+      border: 1px solid #e2e8f0;
+      transition: all 0.3s ease;
+    }
+    
+    /* Highlight the balance when updated */
+    .info-pill.highlight {
+      background: #fff7ed;
+      border-color: #ffedd5;
+      color: var(--primary);
+      transform: scale(1.05);
+    }
+
+    .info-icon { font-size: 1rem; }
 
     .status-indicator {
       display: flex;
@@ -172,8 +211,6 @@
 
     .card:hover { transform: translateY(-5px); box-shadow: 0 20px 50px -10px rgba(0,0,0,0.15); }
     .card:active { transform: scale(0.96); }
-    
-    /* Unavailable State */
     .card.disabled { opacity: 0.5; filter: grayscale(1); pointer-events: none; box-shadow: none; background: #f8fafc; }
 
     .card-icon {
@@ -245,20 +282,43 @@
     <!-- 1. SELECTION SCREEN -->
     <div id="view-selection" class="view active">
       <header>
-        <!-- Logo Text Orange -->
-        <h1>iVend</h1>
+        <div class="header-left">
+          <h1>iVend</h1>
+          
+          <!-- New Info Bar -->
+          <div class="info-bar">
+            <!-- Machine ID -->
+            <div class="info-pill" id="pill-id">
+              <span class="info-icon">🆔</span>
+              <span id="txt-machine-id">--</span>
+            </div>
+            
+            <!-- Temperature -->
+            <div class="info-pill" id="pill-temp">
+              <span class="info-icon">🌡️</span>
+              <span id="txt-temp">--°C</span>
+            </div>
+            
+            <!-- Balance (Bill + Coin Change) -->
+            <div class="info-pill" id="pill-bal">
+              <span class="info-icon">💰</span>
+              <span id="txt-balance">$0.00</span>
+            </div>
+          </div>
+        </div>
+
         <div id="connection-badge" class="status-indicator">
           <div class="dot"></div>
           <span id="conn-text">Connecting...</span>
         </div>
       </header>
+      
       <div id="grid" class="grid-scroller">
-        <!-- JS Injects Cards Here -->
         <div style="grid-column: 1/-1; text-align: center; margin-top: 100px; color: var(--text-sub);">
           Initialize connection...
         </div>
       </div>
-      <!-- Hidden area to toggle logs -->
+      
       <div style="position:fixed; bottom:0; right:0; width:60px; height:60px; z-index:999;" onclick="toggleLog()"></div>
     </div>
 
@@ -294,20 +354,17 @@
   <div id="debug-log"></div>
 
   <script>
-    const WS_URL = "ws://" + "192.168.8.171:5000" + "/ws/vmc";
+    const WS_URL = "ws://" + "localhost:5000" + "/ws/vmc";
     
     const app = {
       ws: null,
       slots: {},
-      state: 'SELECTION', // SELECTION, WAITING, DISPENSING, RESULT
+      state: 'SELECTION',
       retryInterval: null,
 
       init() {
         this.connect();
-        // Prevent context menu
         document.addEventListener('contextmenu', event => event.preventDefault());
-        
-        // Start retry loop to fetch slots if they fail initially
         this.startRetryLoop();
       },
 
@@ -349,7 +406,7 @@
       startRetryLoop() {
         if (this.retryInterval) clearInterval(this.retryInterval);
         
-        // Check every 60 seconds (1 minute)
+        // Auto-retry fetching slots if connection exists but no data
         this.retryInterval = setInterval(() => {
           const hasSlots = Object.keys(this.slots).length > 0;
           const isConnected = this.ws && this.ws.readyState === WebSocket.OPEN;
@@ -358,7 +415,6 @@
              this.log("Auto-retry: Fetching slots...");
              this.requestSlots();
           } else if (hasSlots) {
-             // Stop retrying once we have data
              clearInterval(this.retryInterval);
              this.retryInterval = null;
              this.log("Slots loaded. Retry loop stopped.");
@@ -385,28 +441,56 @@
           this.renderGrid();
         } 
         
-        // 2. Command Finished (Sent to VMC)
-        // User remains on WAITING screen, text updates.
+        // 2. Machine Status Update (ID, Temp, Balance)
+        else if (msg.event === "machine_status") {
+            this.updateMachineInfo(msg);
+        }
+
+        // 3. Command Finished (Sent to VMC)
         else if (msg.event === "command_finished") {
           if (this.state === 'WAITING') {
             document.getElementById('waiting-msg').textContent = "Command received. Waiting for dispensing...";
           }
         } 
         
-        // 3. Vend Status (The Trigger)
+        // 4. Vend Status (The Trigger)
         else if (msg.event === "vend_status") {
-          // Status 1 = Dispensing (Trigger Dispense View)
           if (msg.status === 1) {
             this.switchView('DISPENSING');
-          } 
-          // Status 2 = Success (Trigger Result View)
-          else if (msg.status === 2) {
+          } else if (msg.status === 2) {
             this.showResult(true, "Enjoy!", "Please collect your item below.");
-          } 
-          // Other = Error
-          else {
+          } else {
             this.showResult(false, "Vending Failed", `Error Code: ${msg.status}`);
           }
+        }
+      },
+
+      // --- NEW: Update Machine Info UI ---
+      updateMachineInfo(data) {
+        // Machine ID
+        if (data.machine_id) {
+            document.getElementById('txt-machine-id').textContent = data.machine_id;
+        }
+
+        // Temperature
+        if (data.temperature !== undefined) {
+            document.getElementById('txt-temp').textContent = `${data.temperature}°C`;
+        }
+
+        // Balance Calculation (Bill Change + Coin Change)
+        if (data.bill_change !== undefined && data.coin_change !== undefined) {
+            const totalChange = (data.bill_change + data.coin_change) / 100;
+            const balText = `$${totalChange.toFixed(2)}`;
+            const balEl = document.getElementById('txt-balance');
+            
+            // Only animate if value changed
+            if (balEl.textContent !== balText) {
+                balEl.textContent = balText;
+                const pill = document.getElementById('pill-bal');
+                pill.classList.remove('highlight');
+                void pill.offsetWidth; // trigger reflow
+                pill.classList.add('highlight');
+            }
         }
       },
 
@@ -422,7 +506,6 @@
       },
 
       cancelTransaction() {
-        // Just resets UI, technically command might have been sent already
         this.reset();
       },
 
@@ -433,10 +516,8 @@
       // --- UI HELPERS ---
       switchView(viewName) {
         this.state = viewName;
-        // Hide all
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
         
-        // Show specific
         if (viewName === 'SELECTION') document.getElementById('view-selection').classList.add('active');
         if (viewName === 'WAITING') document.getElementById('view-waiting').classList.add('active');
         if (viewName === 'DISPENSING') document.getElementById('view-dispensing').classList.add('active');
@@ -461,7 +542,6 @@
         
         this.switchView('RESULT');
 
-        // Auto-close success message after 5s
         if (success) {
           setTimeout(() => {
             if (this.state === 'RESULT') this.reset();

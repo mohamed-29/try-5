@@ -44,10 +44,13 @@ CMD_ACK        = 0x42
 CMD_SELECT_BUY = 0x03
 CMD_DIRECT_VEND = 0x06
 CMD_SET_PRICE  = 0x12
+CMD_DEDUCT = 0x64
 
 CMD_INFO_SYNC  = 0x31   # Information synchronization (slots info)
 CMD_SLOT_INFO  = 0x11   # VMC reports selection price/inventory/capacity/product ID
 CMD_VEND_STATUS = 0x04  # VMC dispensing status
+CMD_RECEIVED_MONEY = 0x21 #VMC Recived money
+CMD_MACHINE_STATUS = 0x52
 
 
 # -------------------- HELPERS --------------------
@@ -160,6 +163,8 @@ class VMCConnection:
                 self._ws_set_price(data)
             elif t == "get_slots":
                 self._ws_get_slots(data)
+            elif t == "deduct":
+                self._ws_deduct_price(data)
             else:
                 self._send_ws({"event": "error", "error": f"unknown type '{t}'"})
         except Exception as e:
@@ -247,6 +252,15 @@ class VMCConnection:
             CMD_INFO_SYNC,
             b"",                     # only CommNo in payload
             "get_slots (info sync 0x31)"
+        )
+    
+    def _ws_deduct_price(self, data:dict):
+        amount = int(data["amount"])
+        text = amount.to_bytes(4,"big")
+        self._queue_command(
+            CMD_DEDUCT,
+            text,
+            f"deduct amount = {amount}"
         )
 
     # ------------- serial side -------------
@@ -480,6 +494,60 @@ class VMCConnection:
                 "pack_no": pack_no,
                 "selection": selection,
                 "status": status,
+            }
+            event.update(base)
+            self._send_ws(event)
+            return
+        
+        if cmd == CMD_MACHINE_STATUS and len(payload) >= 25:
+            p = payload
+            pack_no              = p[0]   # communication number
+
+            bill_acceptor        = p[1]   # bill acceptor status
+            coin_acceptor        = p[2]   # coin acceptor status
+            card_acceptor        = p[3]   # card reader status
+
+            temp_controller_stat = p[4]   # temperature controller status
+            temperature          = p[5]   # current temp (°C in most configs)
+            door_status          = p[6]   # door status flag
+
+            bill_change          = int.from_bytes(p[7:11],  "big")  # 4 bytes
+            coin_change          = int.from_bytes(p[11:15], "big")  # 4 bytes
+
+            machine_id_bytes     = bytes(p[15:25])                  # 10 bytes ASCII
+            machine_id_str       = machine_id_bytes.decode("ascii", errors="ignore")
+
+            event = {
+                "event": "machine_status",
+                "pack_no": pack_no,
+                "bill_acceptor": bill_acceptor,
+                "coin_acceptor": coin_acceptor,
+                "card_acceptor": card_acceptor,
+                "temp_controller_stat": temp_controller_stat,
+                "temperature": temperature,
+                "door_status": door_status,
+                "bill_change": bill_change,
+                "coin_change": coin_change,
+                "machine_id": machine_id_str,
+            }
+            event.update(base)
+            self._send_ws(event)
+            return
+
+            
+
+
+
+        if cmd == CMD_RECEIVED_MONEY and len(payload) >=5:
+            p = payload
+            pack_no = p[0]
+            mode = p[1]
+            amount = int.from_bytes(p[2:5], "big")
+            event = {
+                "event":"Received Mony",
+                "pack_no":pack_no,
+                "mode":mode,
+                "amount":amount,
             }
             event.update(base)
             self._send_ws(event)

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>iVend Smart Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Palette - Light/White Theme */
+      --bg-gradient: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      --card-bg: #ffffff;
+      --card-border: transparent; /* Cleaner look without borders */
+      --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.1); /* Deep soft shadow */
+      
+      --primary: #f97316; /* iVend Orange */
+      --primary-hover: #ea580c;
+      --primary-glow: rgba(249, 115, 22, 0.3);
+      
+      --text-main: #0f172a; /* Dark Slate for contrast */
+      --text-sub: #64748b;  /* Muted Slate */
+      
+      --success: #10b981;
+      --error: #ef4444;
+      
+      /* Shapes */
+      --radius-lg: 24px;
+      --radius-pill: 50px;
+      
+      /* Animation */
+      --ease-smooth: cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* --- View Management --- */
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .view {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.95);
+      transition: opacity 0.5s var(--ease-smooth), transform 0.5s var(--ease-smooth);
+      z-index: 0;
+      padding: 20px;
+    }
+
+    .view.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+      z-index: 10;
+    }
+
+    /* --- Typography & Components --- */
+    h1 { font-weight: 800; font-size: 2.2rem; margin: 0; letter-spacing: -1px; color: var(--primary); }
+    h2 { font-weight: 800; font-size: 1.8rem; margin: 0 0 10px 0; color: var(--text-main); }
+    p { color: var(--text-sub); font-size: 1.1rem; text-align: center; margin: 0; line-height: 1.5; font-weight: 500; }
+
+    .btn {
+      background: white;
+      border: 1px solid #e2e8f0;
+      color: var(--text-sub);
+      padding: 18px 48px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.2s var(--ease-smooth);
+      margin-top: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .btn:active { transform: scale(0.95); background: #f1f5f9; }
+    
+    .btn-primary { 
+      background: var(--primary); 
+      border-color: var(--primary); 
+      color: white;
+      box-shadow: 0 8px 25px var(--primary-glow); 
+    }
+    .btn-primary:active { background: var(--primary-hover); }
+
+    /* --- VIEW: SELECTION (GRID) --- */
+    #view-selection {
+      justify-content: flex-start;
+      padding: 0;
+    }
+
+    header {
+      width: 100%;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 20;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-sub);
+      background: #f1f5f9;
+      padding: 8px 16px;
+      border-radius: var(--radius-pill);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; transition: 0.3s; }
+    .status-connected .dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .status-connected { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+
+    .grid-scroller {
+      flex: 1;
+      width: 100%;
+      overflow-y: auto;
+      padding: 30px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 24px;
+      align-content: start;
+    }
+    .grid-scroller::-webkit-scrollbar { display: none; }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.3s var(--ease-smooth);
+      box-shadow: var(--card-shadow);
+    }
+
+    .card:hover { transform: translateY(-5px); box-shadow: 0 20px 50px -10px rgba(0,0,0,0.15); }
+    .card:active { transform: scale(0.96); }
+    
+    /* Unavailable State */
+    .card.disabled { opacity: 0.5; filter: grayscale(1); pointer-events: none; box-shadow: none; background: #f8fafc; }
+
+    .card-icon {
+      width: 90px; height: 90px;
+      background: #f1f5f9;
+      color: var(--text-sub);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    .card-price { font-size: 1.6rem; font-weight: 800; color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px; }
+    .card-id { font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* --- VIEW: WAITING --- */
+    .loader-ring {
+      width: 80px; height: 80px;
+      border: 6px solid #e2e8f0;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 40px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- VIEW: DISPENSING --- */
+    .dispense-graphic {
+      width: 140px; height: 140px;
+      background: white;
+      border-radius: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 60px rgba(249, 115, 22, 0.2);
+      animation: bounce 1.5s infinite;
+      color: var(--primary);
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+
+    /* --- VIEW: RESULT --- */
+    .result-icon {
+      font-size: 6rem;
+      margin-bottom: 20px;
+      animation: popIn 0.5s var(--ease-smooth);
+    }
+    @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+    /* --- Debug Log --- */
+    #debug-log {
+      position: fixed; bottom: 0; left: 0; width: 100%; height: 120px;
+      background: rgba(15, 23, 42, 0.95); color: #0f0;
+      font-family: monospace; font-size: 12px; padding: 10px;
+      overflow-y: auto; z-index: 1000; display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    
+    <!-- 1. SELECTION SCREEN -->
+    <div id="view-selection" class="view active">
+      <header>
+        <!-- Logo Text Orange -->
+        <h1>iVend</h1>
+        <div id="connection-badge" class="status-indicator">
+          <div class="dot"></div>
+          <span id="conn-text">Connecting...</span>
+        </div>
+      </header>
+      <div id="grid" class="grid-scroller">
+        <!-- JS Injects Cards Here -->
+        <div style="grid-column: 1/-1; text-align: center; margin-top: 100px; color: var(--text-sub);">
+          Initialize connection...
+        </div>
+      </div>
+      <!-- Hidden area to toggle logs -->
+      <div style="position:fixed; bottom:0; right:0; width:60px; height:60px; z-index:999;" onclick="toggleLog()"></div>
+    </div>
+
+    <!-- 2. WAITING SCREEN -->
+    <div id="view-waiting" class="view">
+      <div class="loader-ring"></div>
+      <h2>Processing...</h2>
+      <p id="waiting-msg">Sending request to machine</p>
+      
+      <button class="btn" onclick="app.cancelTransaction()">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+        Cancel
+      </button>
+    </div>
+
+    <!-- 3. DISPENSING SCREEN -->
+    <div id="view-dispensing" class="view">
+      <div class="dispense-graphic">📦</div>
+      <h2 style="color:var(--primary)">Dispensing...</h2>
+      <p>Please wait while we prepare your item.</p>
+    </div>
+
+    <!-- 4. RESULT SCREEN -->
+    <div id="view-result" class="view">
+      <div id="res-icon" class="result-icon"></div>
+      <h2 id="res-title"></h2>
+      <p id="res-msg"></p>
+      <button class="btn btn-primary" onclick="app.reset()">Done</button>
+    </div>
+
+  </div>
+
+  <div id="debug-log"></div>
+
+  <script>
+    const WS_URL = "ws://" + "192.168.8.171:5000" + "/ws/vmc";
+    
+    const app = {
+      ws: null,
+      slots: {},
+      state: 'SELECTION', // SELECTION, WAITING, DISPENSING, RESULT
+      retryInterval: null,
+
+      init() {
+        this.connect();
+        // Prevent context menu
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        
+        // Start retry loop to fetch slots if they fail initially
+        this.startRetryLoop();
+      },
+
+      log(msg) {
+        const d = new Date().toLocaleTimeString();
+        const el = document.getElementById('debug-log');
+        el.innerHTML = `<div>[${d}] ${msg}</div>` + el.innerHTML;
+        console.log(`[VMC] ${msg}`);
+      },
+
+      connect() {
+        const badge = document.getElementById('connection-badge');
+        const connText = document.getElementById('conn-text');
+        
+        this.log("Connecting...");
+        this.ws = new WebSocket(WS_URL);
+
+        this.ws.onopen = () => {
+          this.log("Connected");
+          badge.classList.add('status-connected');
+          connText.textContent = "Online";
+          this.requestSlots();
+        };
+
+        this.ws.onclose = () => {
+          this.log("Disconnected");
+          badge.classList.remove('status-connected');
+          connText.textContent = "Offline";
+          setTimeout(() => this.connect(), 3000);
+        };
+
+        this.ws.onmessage = (e) => {
+          try {
+            this.handleEvent(JSON.parse(e.data));
+          } catch(err) { console.error(err); }
+        };
+      },
+
+      startRetryLoop() {
+        if (this.retryInterval) clearInterval(this.retryInterval);
+        
+        // Check every 60 seconds (1 minute)
+        this.retryInterval = setInterval(() => {
+          const hasSlots = Object.keys(this.slots).length > 0;
+          const isConnected = this.ws && this.ws.readyState === WebSocket.OPEN;
+
+          if (isConnected && !hasSlots) {
+             this.log("Auto-retry: Fetching slots...");
+             this.requestSlots();
+          } else if (hasSlots) {
+             // Stop retrying once we have data
+             clearInterval(this.retryInterval);
+             this.retryInterval = null;
+             this.log("Slots loaded. Retry loop stopped.");
+          }
+        }, 60000);
+      },
+
+      send(obj) {
+        if(this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify(obj));
+          this.log("TX: " + obj.type);
+        }
+      },
+
+      requestSlots() {
+        this.send({ type: "get_slots" });
+      },
+
+      // --- CORE LOGIC HANDLER ---
+      handleEvent(msg) {
+        // 1. Slot Info Update
+        if (msg.event === "slot_info") {
+          this.slots[msg.selection] = msg;
+          this.renderGrid();
+        } 
+        
+        // 2. Command Finished (Sent to VMC)
+        // User remains on WAITING screen, text updates.
+        else if (msg.event === "command_finished") {
+          if (this.state === 'WAITING') {
+            document.getElementById('waiting-msg').textContent = "Command received. Waiting for dispensing...";
+          }
+        } 
+        
+        // 3. Vend Status (The Trigger)
+        else if (msg.event === "vend_status") {
+          // Status 1 = Dispensing (Trigger Dispense View)
+          if (msg.status === 1) {
+            this.switchView('DISPENSING');
+          } 
+          // Status 2 = Success (Trigger Result View)
+          else if (msg.status === 2) {
+            this.showResult(true, "Enjoy!", "Please collect your item below.");
+          } 
+          // Other = Error
+          else {
+            this.showResult(false, "Vending Failed", `Error Code: ${msg.status}`);
+          }
+        }
+      },
+
+      // --- USER ACTIONS ---
+      buy(selection) {
+        this.switchView('WAITING');
+        document.getElementById('waiting-msg').textContent = "Sending request to machine...";
+        
+        this.send({
+          type: "buy",
+          selection: selection
+        });
+      },
+
+      cancelTransaction() {
+        // Just resets UI, technically command might have been sent already
+        this.reset();
+      },
+
+      reset() {
+        this.switchView('SELECTION');
+      },
+
+      // --- UI HELPERS ---
+      switchView(viewName) {
+        this.state = viewName;
+        // Hide all
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        
+        // Show specific
+        if (viewName === 'SELECTION') document.getElementById('view-selection').classList.add('active');
+        if (viewName === 'WAITING') document.getElementById('view-waiting').classList.add('active');
+        if (viewName === 'DISPENSING') document.getElementById('view-dispensing').classList.add('active');
+        if (viewName === 'RESULT') document.getElementById('view-result').classList.add('active');
+      },
+
+      showResult(success, title, msg) {
+        const iconEl = document.getElementById('res-icon');
+        const titleEl = document.getElementById('res-title');
+        const msgEl = document.getElementById('res-msg');
+
+        if (success) {
+          iconEl.textContent = "🎉";
+          titleEl.style.color = "var(--success)";
+        } else {
+          iconEl.textContent = "⚠️";
+          titleEl.style.color = "var(--error)";
+        }
+        
+        titleEl.textContent = title;
+        msgEl.textContent = msg;
+        
+        this.switchView('RESULT');
+
+        // Auto-close success message after 5s
+        if (success) {
+          setTimeout(() => {
+            if (this.state === 'RESULT') this.reset();
+          }, 5000);
+        }
+      },
+
+      renderGrid() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = "";
+        
+        const ids = Object.keys(this.slots).map(Number).sort((a,b)=>a-b);
+        if(ids.length === 0) {
+          grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text-sub)">No products loaded</div>`;
+          return;
+        }
+
+        ids.forEach(id => {
+          const s = this.slots[id];
+          const available = (s.status === 0);
+          const price = (s.price/100).toFixed(2);
+          
+          const el = document.createElement('div');
+          el.className = `card ${available ? '' : 'disabled'}`;
+          el.innerHTML = `
+            <div class="card-icon">🍫</div>
+            <div class="card-price">$${price}</div>
+            <div class="card-id">Slot ${id}</div>
+          `;
+          
+          if(available) el.onclick = () => this.buy(id);
+          grid.appendChild(el);
+        });
+      }
+    };
+
+    function toggleLog() {
+      const l = document.getElementById('debug-log');
+      l.style.display = l.style.display==='none'?'block':'none';
+    }
+
+    app.init();
+  </script>
+</body>
+</html>

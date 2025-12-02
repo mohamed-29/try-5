@@ -267,8 +267,9 @@ class VMCConnection:
         )
     
     def _ws_add_money(self, data:dict):
+        mode = 1
         amount = int(data["amount"])
-        text = amount.to_bytes(4,"big")
+        text = mode.to_bytes(1,"big") + amount.to_bytes(4,"big")
         self._queue_command(
             CMD_ADD_MONEY,
             text,

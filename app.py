@@ -52,6 +52,7 @@ CMD_SLOT_INFO  = 0x11   # VMC reports selection price/inventory/capacity/product
 CMD_VEND_STATUS = 0x04  # VMC dispensing status
 CMD_RECEIVED_MONEY = 0x21 #VMC Recived money
 CMD_MACHINE_STATUS = 0x52 #VMC Machine statu
+CMD_CURRENT_AMOUNT = 0x23 #VMC Current amount
 
 
 # -------------------- HELPERS --------------------
@@ -561,6 +562,19 @@ class VMCConnection:
                 "pack_no":pack_no,
                 "mode":mode,
                 "amount":amount,
+            }
+            event.update(base)
+            self._send_ws(event)
+            return
+        
+        if cmd == CMD_CURRENT_AMOUNT and len(payload) >= 4:
+            p = payload
+            pack_no = p[0]
+            amount = int.from_bytes(p[1:5], "big")
+            event = {
+                "event": "current_amount",
+                "pack_no": pack_no,
+                "amount": amount,
             }
             event.update(base)
             self._send_ws(event)

@@ -44,13 +44,14 @@ CMD_ACK        = 0x42
 CMD_SELECT_BUY = 0x03
 CMD_DIRECT_VEND = 0x06
 CMD_SET_PRICE  = 0x12
+CMD_ADD_MONEY = 0x27
 CMD_DEDUCT = 0x64
 
 CMD_INFO_SYNC  = 0x31   # Information synchronization (slots info)
 CMD_SLOT_INFO  = 0x11   # VMC reports selection price/inventory/capacity/product ID
 CMD_VEND_STATUS = 0x04  # VMC dispensing status
 CMD_RECEIVED_MONEY = 0x21 #VMC Recived money
-CMD_MACHINE_STATUS = 0x52
+CMD_MACHINE_STATUS = 0x52 #VMC Machine statu
 
 
 # -------------------- HELPERS --------------------
@@ -165,6 +166,8 @@ class VMCConnection:
                 self._ws_get_slots(data)
             elif t == "deduct":
                 self._ws_deduct_price(data)
+            elif t == "add_money":
+                self._ws_add_money(data)
             else:
                 self._send_ws({"event": "error", "error": f"unknown type '{t}'"})
         except Exception as e:
@@ -261,6 +264,15 @@ class VMCConnection:
             CMD_DEDUCT,
             text,
             f"deduct amount = {amount}"
+        )
+    
+    def _ws_add_money(self, data:dict):
+        amount = int(data["amount"])
+        text = amount.to_bytes(4,"big")
+        self._queue_command(
+            CMD_ADD_MONEY,
+            text,
+            f"add money amount = {amount}"
         )
 
     # ------------- serial side -------------

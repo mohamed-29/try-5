@@ -452,6 +452,10 @@
             document.getElementById('waiting-msg').textContent = "Command received. Waiting for dispensing...";
           }
         } 
+
+        else if (msg.event === "current_amount"){
+           this.updateCurrent_amount(msg);
+        }
         
         // 4. Vend Status (The Trigger)
         else if (msg.event === "vend_status") {
@@ -476,23 +480,13 @@
         if (data.temperature !== undefined) {
             document.getElementById('txt-temp').textContent = `${data.temperature}°C`;
         }
-
-        // Balance Calculation (Bill Change + Coin Change)
-        if (data.bill_change !== undefined && data.coin_change !== undefined) {
-            const totalChange = (data.bill_change + data.coin_change) / 100;
-            const balText = `$${totalChange.toFixed(2)}`;
-            const balEl = document.getElementById('txt-balance');
-            
-            // Only animate if value changed
-            if (balEl.textContent !== balText) {
-                balEl.textContent = balText;
-                const pill = document.getElementById('pill-bal');
-                pill.classList.remove('highlight');
-                void pill.offsetWidth; // trigger reflow
-                pill.classList.add('highlight');
-            }
-        }
       },
+
+      updateCurrent_amount(data){
+        if(data.amount){
+          document.getElementById('txt-balance').textContent = data.amount;
+        }
+      }
 
       // --- USER ACTIONS ---
       buy(selection) {

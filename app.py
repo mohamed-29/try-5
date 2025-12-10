@@ -31,17 +31,29 @@ def on_vmc_log(msg):
     print(f"[VMC] {msg}")
     broadcast({"event": "log", "message": msg})
 
+# app.py
+
 def on_vmc_packet(cmd_id, payload):
-    """Received DATA from VMC. Decode it using protocol definitions."""
-    response = {"event": "vmc_data_raw", "cmd": f"0x{cmd_id:02X}", "raw": payload.hex()}
+    """
+    Received DATA from VMC. 
+    If we know the command, parse it detail.
+    If we don't know it, use the generic decoder.
+    """
+    cmd_hex = f"0x{cmd_id:02X}"
     
-    # Check if we have a specific decoder for this command ID
+    # 1. Try to find a specific decoder (e.g., for 0x11 or 0x04)
     if cmd_id in p.DECODERS:
         decoded = p.DECODERS[cmd_id](payload)
-        response.update(decoded)
+        # Add the command ID to the result for clarity
+        decoded["cmd"] = cmd_hex
+        broadcast(decoded)
         
-    broadcast(response)
-
+    # 2. If no specific decoder exists, use the Catch-All
+    else:
+        # Use the generic decoder we just added to vmc_protocol.py
+        generic_data = p.decode_generic(payload)
+        generic_data["cmd"] = cmd_hex
+        broadcast(generic_data)
 # --- WebSocket Handler ---
 
 @sock.route("/ws/vmc")
@@ -88,4 +100,3 @@ def vmc_ws(ws):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
-    

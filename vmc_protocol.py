@@ -26,6 +26,25 @@ COMMAND_MAP = {
 # --- Encoders (PC -> VMC) ---
 # Functions to turn Python variables into bytes for the payload
 
+# vmc_protocol.py
+
+# ... existing decoders ...
+
+def decode_generic(payload):
+    """
+    Fallback decoder for ANY command not explicitly defined.
+    Extracts the PackNO (first byte) and returns the rest as raw hex.
+    Reference: PDF Page 4, Section 3 (PackNO+Text)
+    """
+    if len(payload) < 1:
+        return {"error": "packet empty"}
+    
+    return {
+        "event": "vmc_data_unknown", # Distinct event name for unhandled commands
+        "pack_no": payload[0],       # Always the first byte
+        "raw_data": payload[1:].hex().upper() # The rest is the unknown data
+    }
+
 def encode_buy(data):
     # [cite: 187] Selection number (2 byte)
     return int(data['selection']).to_bytes(2, 'big')

@@ -114,7 +114,7 @@ def decode_machine_status(payload):
     return {
         "event": "machine_status",
         "pack_no": payload[0],
-        "temp": payload[5],
+        "temperature": payload[5],
         "door_open": payload[6] == 1,
         "machine_id": payload[15:25].decode('ascii', errors='ignore')
     }
@@ -140,7 +140,7 @@ def decode_selection_status(payload):
         "pack_no": payload[0],
         "communication_number": payload[1],
         "status_code": status_code,
-        "status_message": status_message,@
+        "status_message": status_message,
         "other_byte": payload[3]
     }
     

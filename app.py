@@ -44,8 +44,8 @@ CMD_ACK        = 0x42
 CMD_SELECT_BUY = 0x03
 CMD_DIRECT_VEND = 0x06
 CMD_SET_PRICE  = 0x12
-CMD_ADD_MONEY = 0x27
-CMD_DEDUCT = 0x64
+CMD_ADD_MONEY  = 0x27
+CMD_DEDUCT     = 0x64
 
 CMD_INFO_SYNC  = 0x31   # Information synchronization (slots info)
 CMD_SLOT_INFO  = 0x11   # VMC reports selection price/inventory/capacity/product ID

@@ -3,3 +3,5 @@ page2.html
 /ivendapp
 /IvendApp_Source
 /exmaple app
+__pycache__/
+*.pyc

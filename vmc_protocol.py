@@ -18,7 +18,7 @@ COMMAND_MAP = {
     "direct_vend":     0x06, # [cite: 205]
     "slot_info":       0x11, # [cite: 149]
     "set_price":       0x12, # [cite: 155]
-    "info_sync":       0x31, # [cite: 236]
+    "get_slots":       0x31, # [cite: 236]
     "machine_status":  0x52, # [cite: 257]
     "deduct":          0x64, # [cite: 260]
 }
@@ -119,11 +119,37 @@ def decode_machine_status(payload):
         "machine_id": payload[15:25].decode('ascii', errors='ignore')
     }
 
+def decode_selection_status(payload):
+    # [cite: 257] Complex packet decoding
+    if len(payload) < 4: return {"error": "packet too short"}
+    
+    status_code = payload[2]
+    status_message = {
+        0x01: "Normal",
+        0x02: "Out of stock",
+        0x03: "Selection doesn’t exist",
+        0x04: "Selection pause",
+        0x05: "There is product inside elevator",
+        0x06: "Delivery door unlocked",
+        0x07: "Elevator error",
+        0x08: "Elevator self-checking faulty",
+    }.get(status_code, "Unknown status")
+
+    return {
+        "event": "selection_status",
+        "pack_no": payload[0],
+        "communication_number": payload[1],
+        "status_code": status_code,
+        "status_message": status_message,@
+        "other_byte": payload[3]
+    }
+    
 # Dispatcher for decoders based on Command ID
 DECODERS = {
     0x11: decode_slot_info,
     0x04: decode_vend_status,
     0x52: decode_machine_status,
+    0x02: decode_selection_status,
 }
 
 def build_frame(cmd_id, comm_no, payload_bytes):

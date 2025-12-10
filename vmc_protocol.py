@@ -1,0 +1,123 @@
+"""
+vmc_protocol.py
+Definitions for Commands, Encoders (JSON->Bytes), and Decoders (Bytes->JSON).
+Reference: VMC - Upper computer V3.0
+"""
+import struct
+
+# --- Protocol Constants ---
+STX1, STX2 = 0xFA, 0xFB
+CMD_POLL = 0x41
+CMD_ACK  = 0x42
+
+# --- Command Registry ---
+# Map readable names to Command IDs (Hex)
+COMMAND_MAP = {
+    "check_selection": 0x01, # [cite: 178]
+    "buy":             0x03, # [cite: 187]
+    "direct_vend":     0x06, # [cite: 205]
+    "slot_info":       0x11, # [cite: 149]
+    "set_price":       0x12, # [cite: 155]
+    "info_sync":       0x31, # [cite: 236]
+    "machine_status":  0x52, # [cite: 257]
+    "deduct":          0x64, # [cite: 260]
+}
+
+# --- Encoders (PC -> VMC) ---
+# Functions to turn Python variables into bytes for the payload
+
+def encode_buy(data):
+    # [cite: 187] Selection number (2 byte)
+    return int(data['selection']).to_bytes(2, 'big')
+
+def encode_set_price(data):
+    # [cite: 155] Selection (2 byte) + Price (4 byte)
+    sel = int(data['selection']).to_bytes(2, 'big')
+    price = int(data['price']).to_bytes(4, 'big')
+    return sel + price
+
+def encode_direct_vend(data):
+    # [cite: 205] Drop(1) + Elev(1) + Sel(2) + Cart(1)
+    return struct.pack(
+        '>BBHB',
+        1 if data.get('use_drop', True) else 0,
+        1 if data.get('use_elevator', True) else 0,
+        int(data['selection']),
+        1 if data.get('cart', False) else 0
+    )
+
+def encode_deduct(data):
+    # [cite: 264] Amount (4 byte)
+    return int(data['amount']).to_bytes(4, 'big')
+
+# Dispatcher for encoders
+ENCODERS = {
+    "buy": encode_buy,
+    "set_price": encode_set_price,
+    "direct_vend": encode_direct_vend,
+    "deduct": encode_deduct,
+    # Add new commands here...
+}
+
+# --- Decoders (VMC -> PC) ---
+# Functions to turn raw bytes into Python Dictionaries
+
+def decode_slot_info(payload):
+    # [cite: 149] PackNo(1)+Sel(2)+Price(4)+Inv(1)+Cap(1)+ID(2)+Stat(1)
+    # Payload[0] is PackNO, so actual data starts at payload[1]
+    if len(payload) < 12: return {"error": "packet too short"}
+    
+    unpacked = struct.unpack('>HIBBHB', payload[1:12])
+    return {
+        "event": "slot_info",
+        "pack_no": payload[0],
+        "selection": unpacked[0],
+        "price": unpacked[1],
+        "inventory": unpacked[2],
+        "capacity": unpacked[3],
+        "product_id": unpacked[4],
+        "status": unpacked[5]
+    }
+
+def decode_vend_status(payload):
+    # [cite: 195] PackNo(1)+Status(1)+Sel(2)
+    if len(payload) < 4: return {"error": "packet too short"}
+    return {
+        "event": "vend_status",
+        "pack_no": payload[0],
+        "status_code": payload[1],
+        "selection": int.from_bytes(payload[2:4], 'big')
+    }
+
+def decode_machine_status(payload):
+    # [cite: 257] Complex packet decoding
+    if len(payload) < 25: return {"error": "packet too short"}
+    return {
+        "event": "machine_status",
+        "pack_no": payload[0],
+        "temp": payload[5],
+        "door_open": payload[6] == 1,
+        "machine_id": payload[15:25].decode('ascii', errors='ignore')
+    }
+
+# Dispatcher for decoders based on Command ID
+DECODERS = {
+    0x11: decode_slot_info,
+    0x04: decode_vend_status,
+    0x52: decode_machine_status,
+}
+
+def build_frame(cmd_id, comm_no, payload_bytes):
+    """Constructs the full packet with checksum [cite: 86]"""
+    # [cite: 90] PackNO is the first byte of text
+    full_payload = bytes([comm_no]) + payload_bytes
+    length = len(full_payload)
+    
+    header = bytes([STX1, STX2, cmd_id, length])
+    
+    # [cite: 91] Checksum calculation
+    xor_val = 0
+    for b in header + full_payload:
+        xor_val ^= b
+        
+    return header + full_payload + bytes([xor_val])

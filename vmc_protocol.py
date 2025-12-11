@@ -13,15 +13,16 @@ CMD_ACK  = 0x42
 # --- Command Registry ---
 # Map readable names to Command IDs (Hex)
 COMMAND_MAP = {
-    "check_selection": 0x01, # [cite: 178]
-    "buy":             0x03, # [cite: 187]
-    "direct_vend":     0x06, # [cite: 205]
-    "slot_info":       0x11, # [cite: 149]
-    "set_price":       0x12, # [cite: 155]
-    "set_inventory":   0x13, # [cite: 156]
-    "get_slots":       0x31, # [cite: 236]
-    "machine_status":  0x52, # [cite: 257]
-    "deduct":          0x64, # [cite: 260]
+    "check_selection":  0x01, # [cite: 178]
+    "buy":              0x03, # [cite: 187]
+    "select_or_cancel": 0x05, # [cite: 201]
+    "direct_vend":      0x06, # [cite: 205]
+    "slot_info":        0x11, # [cite: 149]
+    "set_price":        0x12, # [cite: 155]
+    "set_inventory":    0x13, # [cite: 156]
+    "get_slots":        0x31, # [cite: 236]
+    "machine_status":   0x52, # [cite: 257]
+    "deduct":           0x64, # [cite: 260]
 }
 
 # --- Encoders (PC -> VMC) ---
@@ -82,6 +83,10 @@ def encode_set_inventory(data):
     inv = int(data['inventory']).to_bytes(1, 'big')
     return sel + inv
 
+def encode_select_or_cancel(data):
+    # [cite: 201] Selection number (2 byte)
+    return int(data['selection']).to_bytes(2, 'big')
+
 # Dispatcher for encoders
 ENCODERS = {
     "buy": encode_buy,
@@ -90,6 +95,7 @@ ENCODERS = {
     "deduct": encode_deduct,
     "check_selection": encode_check_selection,
     "set_inventory": encode_set_inventory,
+    "select_or_cancel": encode_select_or_cancel,
 }
 
 # --- Decoders (VMC -> PC) ---
@@ -161,6 +167,16 @@ def decode_selection_status(payload):
         "selection": int.from_bytes(payload[2:4], 'big'),
         "raw_payload": payload.hex()
     }
+
+def decode_select_or_cancel(payload):
+    # [cite: 201] Selection number (2 byte)
+    if len(payload) < 2: return {"error": "packet too short"}
+    return {
+        "event": "select_or_cancel",
+        "pack_no": payload[0],
+        "selection": int.from_bytes(payload[1:3], 'big'),
+        "raw_payload": payload.hex()
+    }
     
 # Dispatcher for decoders based on Command ID
 DECODERS = {
@@ -168,6 +184,7 @@ DECODERS = {
     0x04: decode_vend_status,
     0x52: decode_machine_status,
     0x02: decode_selection_status,
+    0x05: decode_select_or_cancel,
 }
 
 def build_frame(cmd_id, comm_no, payload_bytes):

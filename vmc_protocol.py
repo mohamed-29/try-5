@@ -154,7 +154,7 @@ def decode_selection_status(payload):
     # [cite: 257] Complex packet decoding
     if len(payload) < 4: return {"error": "packet too short"}
     
-    status_code = payload[2]
+    status_code = payload[1]
     status_message = {
         0x01: "Normal",
         0x02: "Out of stock",
@@ -169,10 +169,9 @@ def decode_selection_status(payload):
     return {
         "event": "selection_status",
         "pack_no": payload[0],
-        "communication_number": payload[1],
         "status_code": status_code,
         "status_message": status_message,
-        "selection": int.from_bytes(payload[2:4], 'big'),
+        "selection": int.from_bytes(payload[1:3], 'big'),
         "raw_payload": payload.hex()
     }
 

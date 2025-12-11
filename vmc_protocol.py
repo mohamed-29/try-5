@@ -20,7 +20,6 @@ COMMAND_MAP = {
     "slot_info":        0x11, # [cite: 149]
     "set_price":        0x12, # [cite: 155]
     "set_inventory":    0x13, # [cite: 156]
-    "receive_money":    0x21, # [cite: 261]
     "add_money":        0x27, # [cite: 266]
     "get_slots":        0x31, # [cite: 236]
     "machine_status":   0x52, # [cite: 257]
@@ -197,6 +196,16 @@ def decode_receive_money(payload):
         "raw_payload": payload.hex()
     }
 
+def decode_current_amount(payload):
+    # [cite: 263] Amount (4 byte)
+    if len(payload) < 4: return {"error": "packet too short"}
+    return {
+        "event": "current_amount",
+        "pack_no": payload[0],
+        "amount": int.from_bytes(payload[1:5], 'big'),
+        "raw_payload": payload.hex()
+    }
+
 # Dispatcher for decoders based on Command ID
 DECODERS = {
     0x11: decode_slot_info,
@@ -205,6 +214,7 @@ DECODERS = {
     0x02: decode_selection_status,
     0x05: decode_select_or_cancel,
     0x21: decode_receive_money,
+    0x23: decode_current_amount,
 }
 
 def build_frame(cmd_id, comm_no, payload_bytes):

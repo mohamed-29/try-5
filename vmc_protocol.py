@@ -20,6 +20,8 @@ COMMAND_MAP = {
     "slot_info":        0x11, # [cite: 149]
     "set_price":        0x12, # [cite: 155]
     "set_inventory":    0x13, # [cite: 156]
+    "receive_money":    0x21, # [cite: 261]
+    "add_money":        0x27, # [cite: 266]
     "get_slots":        0x31, # [cite: 236]
     "machine_status":   0x52, # [cite: 257]
     "deduct":           0x64, # [cite: 260]
@@ -87,6 +89,12 @@ def encode_select_or_cancel(data):
     # [cite: 201] Selection number (2 byte)
     return int(data['selection']).to_bytes(2, 'big')
 
+def encode_add_money(data):
+    # [cite: 266] Amount (4 byte)
+    mode = int(data['mode']).to_bytes(1, 'big')
+    amount = int(data['amount']).to_bytes(4, 'big')
+    return mode + amount
+
 # Dispatcher for encoders
 ENCODERS = {
     "buy": encode_buy,
@@ -96,6 +104,7 @@ ENCODERS = {
     "check_selection": encode_check_selection,
     "set_inventory": encode_set_inventory,
     "select_or_cancel": encode_select_or_cancel,
+    "add_money": encode_add_money,
 }
 
 # --- Decoders (VMC -> PC) ---
@@ -177,7 +186,17 @@ def decode_select_or_cancel(payload):
         "selection": int.from_bytes(payload[1:3], 'big'),
         "raw_payload": payload.hex()
     }
-    
+
+def decode_receive_money(payload):
+    # [cite: 261] Amount (4 byte)
+    if len(payload) < 4: return {"error": "packet too short"}
+    return {
+        "event": "received_money",
+        "pack_no": payload[0],
+        "amount": int.from_bytes(payload[1:5], 'big'),
+        "raw_payload": payload.hex()
+    }
+
 # Dispatcher for decoders based on Command ID
 DECODERS = {
     0x11: decode_slot_info,
@@ -185,6 +204,7 @@ DECODERS = {
     0x52: decode_machine_status,
     0x02: decode_selection_status,
     0x05: decode_select_or_cancel,
+    0x21: decode_receive_money,
 }
 
 def build_frame(cmd_id, comm_no, payload_bytes):

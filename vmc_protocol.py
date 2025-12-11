@@ -90,7 +90,7 @@ def encode_select_or_cancel(data):
 
 def encode_add_money(data):
     # [cite: 266] Amount (4 byte)
-    mode = int(data['mode']).to_bytes(1, 'big')
+    mode = int(1).to_bytes(1, 'big')
     amount = int(data['amount']).to_bytes(4, 'big')
     return mode + amount
 

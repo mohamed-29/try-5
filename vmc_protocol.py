@@ -71,13 +71,17 @@ def encode_deduct(data):
     # [cite: 264] Amount (4 byte)
     return int(data['amount']).to_bytes(4, 'big')
 
+def encode_check_selection(data):
+    # [cite: 178] Selection number (2 byte)
+    return int(data['selection']).to_bytes(2, 'big')
+
 # Dispatcher for encoders
 ENCODERS = {
     "buy": encode_buy,
     "set_price": encode_set_price,
     "direct_vend": encode_direct_vend,
     "deduct": encode_deduct,
-    # Add new commands here...
+    "check_selection": encode_check_selection,
 }
 
 # --- Decoders (VMC -> PC) ---
@@ -146,7 +150,7 @@ def decode_selection_status(payload):
         "communication_number": payload[1],
         "status_code": status_code,
         "status_message": status_message,
-        "other_byte": payload[3],
+        "selection": int.from_bytes(payload[2:4], 'big'),
         "raw_payload": payload.hex()
     }
     

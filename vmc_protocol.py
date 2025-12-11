@@ -30,6 +30,7 @@ COMMAND_MAP = {
 
 # ... existing decoders ...
 
+
 def decode_generic(payload):
     """
     Fallback decoder for ANY command not explicitly defined.
@@ -42,7 +43,8 @@ def decode_generic(payload):
     return {
         "event": "vmc_data_unknown", # Distinct event name for unhandled commands
         "pack_no": payload[0],       # Always the first byte
-        "raw_data": payload[1:].hex().upper() # The rest is the unknown data
+        "raw_data": payload[1:].hex().upper(), # The rest is the unknown data
+        "raw_payload": payload.hex()
     }
 
 def encode_buy(data):
@@ -95,7 +97,8 @@ def decode_slot_info(payload):
         "inventory": unpacked[2],
         "capacity": unpacked[3],
         "product_id": unpacked[4],
-        "status": unpacked[5]
+        "status": unpacked[5],
+        "raw_payload": payload.hex()
     }
 
 def decode_vend_status(payload):
@@ -105,7 +108,8 @@ def decode_vend_status(payload):
         "event": "vend_status",
         "pack_no": payload[0],
         "status_code": payload[1],
-        "selection": int.from_bytes(payload[2:4], 'big')
+        "selection": int.from_bytes(payload[2:4], 'big'),
+        "raw_payload": payload.hex()
     }
 
 def decode_machine_status(payload):
@@ -116,7 +120,8 @@ def decode_machine_status(payload):
         "pack_no": payload[0],
         "temperature": payload[5],
         "door_open": payload[6] == 1,
-        "machine_id": payload[15:25].decode('ascii', errors='ignore')
+        "machine_id": payload[15:25].decode('ascii', errors='ignore'),
+        "raw_payload": payload.hex()
     }
 
 def decode_selection_status(payload):
@@ -141,7 +146,8 @@ def decode_selection_status(payload):
         "communication_number": payload[1],
         "status_code": status_code,
         "status_message": status_message,
-        "other_byte": payload[3]
+        "other_byte": payload[3],
+        "raw_payload": payload.hex()
     }
     
 # Dispatcher for decoders based on Command ID

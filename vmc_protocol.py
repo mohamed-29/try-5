@@ -18,6 +18,7 @@ COMMAND_MAP = {
     "direct_vend":     0x06, # [cite: 205]
     "slot_info":       0x11, # [cite: 149]
     "set_price":       0x12, # [cite: 155]
+    "set_inventory":   0x13, # [cite: 156]
     "get_slots":       0x31, # [cite: 236]
     "machine_status":  0x52, # [cite: 257]
     "deduct":          0x64, # [cite: 260]
@@ -75,6 +76,12 @@ def encode_check_selection(data):
     # [cite: 178] Selection number (2 byte)
     return int(data['selection']).to_bytes(2, 'big')
 
+def encode_set_inventory(data):
+    # [cite: 156] Selection (2 byte) + Inventory (1 byte)
+    sel = int(data['selection']).to_bytes(2, 'big')
+    inv = int(data['inventory']).to_bytes(1, 'big')
+    return sel + inv
+
 # Dispatcher for encoders
 ENCODERS = {
     "buy": encode_buy,
@@ -82,6 +89,7 @@ ENCODERS = {
     "direct_vend": encode_direct_vend,
     "deduct": encode_deduct,
     "check_selection": encode_check_selection,
+    "set_inventory": encode_set_inventory,
 }
 
 # --- Decoders (VMC -> PC) ---

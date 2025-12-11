@@ -188,11 +188,12 @@ def decode_select_or_cancel(payload):
 
 def decode_receive_money(payload):
     # [cite: 261] Amount (4 byte)
-    if len(payload) < 4: return {"error": "packet too short"}
+    if len(payload) < 5: return {"error": "packet too short"}
     return {
         "event": "received_money",
         "pack_no": payload[0],
-        "amount": int.from_bytes(payload[1:5], 'big'),
+        "mode": payload[1],
+        "amount": int.from_bytes(payload[2:6], 'big'),
         "raw_payload": payload.hex()
     }
 

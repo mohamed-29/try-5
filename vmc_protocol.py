@@ -171,7 +171,7 @@ def decode_selection_status(payload):
         "pack_no": payload[0],
         "status_code": status_code,
         "status_message": status_message,
-        "selection": int.from_bytes(payload[1:3], 'big'),
+        "selection": int.from_bytes(payload[2:4], 'big'),
         "raw_payload": payload.hex()
     }
 

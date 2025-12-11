@@ -20,6 +20,7 @@ COMMAND_MAP = {
     "slot_info":        0x11, # [cite: 149]
     "set_price":        0x12, # [cite: 155]
     "set_inventory":    0x13, # [cite: 156]
+    "give_change":      0x25, # [cite: 265]
     "add_money":        0x27, # [cite: 266]
     "get_slots":        0x31, # [cite: 236]
     "machine_status":   0x52, # [cite: 257]
